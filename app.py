@@ -1,3 +1,15 @@
+from flask import Flask
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+app = Flask(__name__)
+
+# Get the OpenAI API key from environment variables
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 from flask import Flask, render_template, request, jsonify
 import pyttsx3
 import openai
