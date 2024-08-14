@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to ChatGPT</title>
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const formData = new FormData();
+                        formData.append('audio', audioBlob, 'audio.wav');
+                        fetch('/transcribe', { method: 'POST', body: formData })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.text) {
+                                    document.getElementById('response').innerText = data.text;
+                                    fetch('/synthesize', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ text: data.text })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.audio_url) {
+                                            const audio = new Audio(data.audio_url);
+                                            audio.play();
+                                        }
+                                    });
+                                } else if (data.error) {
+                                    alert('Error: ' + data.error);
+                                }
+                            });
+                    };
+                    mediaRecorder.start();
+                })
+                .catch(error => {
+                    alert('Error accessing microphone: ' + error.message);
+                });
+        }
+
+        function stopRecording() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Speech to ChatGPT</h1>
+    <button onclick="startRecording()">Start Recording</button>
+    <button onclick="stopRecording()">Stop Recording</button>
+    <div id="response"></div>
+</body>
+</html>
+
